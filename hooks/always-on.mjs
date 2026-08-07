@@ -3,8 +3,8 @@
 // Never blocks session start: any failure exits 0.
 //
 // Runs under Node so it works on macOS, Linux, and Windows without depending on
-// a POSIX shell (`sh`) being on PATH. The hook uses exec form, so Claude Code
-// passes the script path directly without PowerShell or POSIX-shell parsing.
+// a POSIX shell (`sh`) being on PATH. The hook manifest keeps the executable and
+// quoted script path in one command string, as required by Codex and Claude Code.
 // Native sh and PowerShell implementations remain available as fallbacks.
 
 import fs from "node:fs";

@@ -108,15 +108,52 @@ class AlwaysOnHookTest(unittest.TestCase):
 
         self.assertEqual(1, len(set(outputs.values())))
 
-    def test_hook_uses_shell_free_node_exec_form(self):
+    def test_hook_uses_supported_command_string(self):
         config = json.loads((ROOT / "hooks" / "hooks.json").read_text())
         hook = config["hooks"]["SessionStart"][0]["hooks"][0]
 
-        self.assertEqual("node", hook["command"])
         self.assertEqual(
-            ["${CLAUDE_PLUGIN_ROOT}/hooks/always-on.mjs"],
-            hook["args"],
+            'node "${CLAUDE_PLUGIN_ROOT}/hooks/always-on.mjs"',
+            hook["command"],
         )
+        self.assertNotIn("args", hook)
+
+    def test_claude_manifest_does_not_redeclare_standard_hooks_file(self):
+        manifest = json.loads(
+            (ROOT / ".claude-plugin" / "plugin.json").read_text()
+        )
+
+        # Claude Code discovers hooks/hooks.json automatically. Declaring the
+        # same path here makes the plugin load that file twice and reject it.
+        self.assertNotIn("hooks", manifest)
+
+    def test_configured_hook_runs_with_session_json_on_stdin(self):
+        config = json.loads((ROOT / "hooks" / "hooks.json").read_text())
+        hook = config["hooks"]["SessionStart"][0]["hooks"][0]
+        command = hook["command"].replace(
+            "${CLAUDE_PLUGIN_ROOT}", str(self.plugin_root)
+        )
+        env = os.environ.copy()
+        env["CLAUDE_CONFIG_DIR"] = str(self.config_dir)
+
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            input=json.dumps(
+                {
+                    "session_id": "test-session",
+                    "hook_event_name": "SessionStart",
+                }
+            ),
+            env=env,
+            shell=True,
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("", result.stdout)
+        self.assertEqual("", result.stderr)
 
 
 if __name__ == "__main__":
