@@ -118,6 +118,15 @@ class AlwaysOnHookTest(unittest.TestCase):
         )
         self.assertNotIn("args", hook)
 
+    def test_claude_manifest_does_not_redeclare_standard_hooks_file(self):
+        manifest = json.loads(
+            (ROOT / ".claude-plugin" / "plugin.json").read_text()
+        )
+
+        # Claude Code discovers hooks/hooks.json automatically. Declaring the
+        # same path here makes the plugin load that file twice and reject it.
+        self.assertNotIn("hooks", manifest)
+
     def test_configured_hook_runs_with_session_json_on_stdin(self):
         config = json.loads((ROOT / "hooks" / "hooks.json").read_text())
         hook = config["hooks"]["SessionStart"][0]["hooks"][0]
